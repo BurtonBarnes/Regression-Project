@@ -366,17 +366,39 @@ def polynomial(train_X, train_y, validate_X, validate_y, test_X):
 
 
 
-def tweedie_on_test(train_X, test_X, train_y, test_y):
-    glm = TweedieRegressor(power=1, alpha=0)
-    
-    glm.fit(train_X, train_y.property_value)
-    
-    y_test = pd.DataFrame(test_y)
+def polynomial_on_test(train_X, test_X, train_y, test_y, validate_X, validate_y):
+    # make the polynomial features to get a new set of features
+    pf = PolynomialFeatures(degree=2)
+     # fit and transform X_train_scaled
+    X_train_degree2 = pf.fit_transform(train_X)
 
-    # predict on test
-    y_test['property_value_pred_glm'] = glm.predict(test_X)
+    # transform X_validate_scaled & X_test_scaled
+    X_validate_degree2 = pf.transform(validate_X)
+    X_test_degree2 =  pf.transform(test_X)
+    
+    # create the model object
+    lm2 = LinearRegression(normalize=True)
+
+    # fit the model to our training data. We must specify the column in y_train, 
+    # since we have converted it to a dataframe from a series! 
+    lm2.fit(X_train_degree2, train_y.property_value)
+
+    # predict train
+    train_y['property_value_pred_lm2'] = lm2.predict(X_train_degree2)
 
     # evaluate: rmse
-    rmse_test = mean_squared_error(y_test.property_value, y_test.property_value_pred_glm) ** (1/2)
+    rmse_train = mean_squared_error(train_y.property_value, train_y.property_value_pred_lm2) ** (1/2)
 
-    print("RMSE for OLS Model using LinearRegression\nOut-of-Sample Performance: ", rmse_test)
+    # predict validate
+    validate_y['property_value_pred_lm2'] = lm2.predict(X_validate_degree2)
+
+    # evaluate: rmse
+    rmse_validate = mean_squared_error(validate_y.property_value, validate_y.property_value_pred_lm2) ** 0.5
+
+    # predict test
+    test_y['property_value_pred_lm2'] = lm2.predict(X_test_degree2)
+    
+    #evaluate: rmse
+    rmse_test = mean_squared_error(test_y.property_value, test_y.property_value_pred_lm2) ** 0.5
+    
+    print("Test Out-of-Sample: ", rmse_test)
