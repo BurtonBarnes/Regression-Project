@@ -44,7 +44,6 @@ def wrangle_zillow():
     df.drop(df[df.square_feet > 70000].index, inplace=True)
     df.drop(df[df.property_value > 50000000].index, inplace=True)
     df.drop(df[df.taxamount > 400000].index, inplace=True)
-    df['baseline'] = df.square_feet.mean()
     
     lm = LinearRegression()
 
@@ -330,7 +329,7 @@ def tweedie(train_X, train_y, validate_X, validate_y):
 
 
 
-def linear(train_X, train_y, validate_X, validate_y, test_X):
+def polynomial(train_X, train_y, validate_X, validate_y, test_X):
     # make the polynomial features to get a new set of features
     pf = PolynomialFeatures(degree=2)
 
@@ -363,3 +362,21 @@ def linear(train_X, train_y, validate_X, validate_y, test_X):
     print("RMSE for Polynomial Model, degrees=2\nTraining/In-Sample: ", rmse_train, 
       "\nValidation/Out-of-Sample: ", rmse_validate)
     return rmse_train, rmse_validate
+
+
+
+
+def tweedie_on_test(train_X, test_X, train_y, test_y):
+    glm = TweedieRegressor(power=1, alpha=0)
+    
+    glm.fit(train_X, train_y.property_value)
+    
+    y_test = pd.DataFrame(test_y)
+
+    # predict on test
+    y_test['property_value_pred_glm'] = glm.predict(test_X)
+
+    # evaluate: rmse
+    rmse_test = mean_squared_error(y_test.property_value, y_test.property_value_pred_glm) ** (1/2)
+
+    print("RMSE for OLS Model using LinearRegression\nOut-of-Sample Performance: ", rmse_test)
